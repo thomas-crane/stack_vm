@@ -30,7 +30,7 @@ bool svm_load_program_from_array(svm_t *svm, svm_instruction_t *instructions, ui
 
 svm_err_t svm_exec_instruction(svm_t *svm)
 {
-  if (svm->ip >= SVM_MAX_PROGRAM_SIZE) {
+  if (svm->ip >= svm->program_size) {
     return SVM_ERR_IP_OVERFLOW;
   }
   svm_instruction_t instruction = svm->program[svm->ip];
@@ -53,6 +53,13 @@ svm_err_t svm_exec_instruction(svm_t *svm)
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack_ptr--;
+      break;
+    case SVM_INST_DUP:
+      if (svm->stack_ptr < 1) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr] = svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr++;
       break;
     case  SVM_INST_ADD:
       if (svm->stack_ptr < 2) {
@@ -124,6 +131,21 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] <= svm->stack[svm->stack_ptr - 1];
       svm->stack_ptr--;
       break;
+    case SVM_INST_JMP:
+      // Don't worry about checking bounds here because if the ip goes beyond the program size it will be caught in the
+      // next call to svm_exec_instruction.
+      svm->ip = instruction.operand;
+      break;
+    case SVM_INST_JNZ:
+      if (svm->stack_ptr < 1) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      if (svm->stack[svm->stack_ptr - 1] != 0) {
+        // See above note.
+        svm->ip = instruction.operand;
+      }
+      svm->stack_ptr--;
+      break;
     default:
       return SVM_ERR_ILLEGAL_INSTRUCTION;
       break;
@@ -161,11 +183,21 @@ int main(void)
   svm_init(&svm);
 
   svm_instruction_t program[] = {
-    {.type = SVM_INST_PUSH, .operand = 20},
-    {.type = SVM_INST_PUSH, .operand = 10},
+    // Counter.
+    {.type = SVM_INST_PUSH, .operand = 0},
+
+    // Add one.
+    {.type = SVM_INST_PUSH, .operand = 1},
     {.type = SVM_INST_ADD, },
-    {.type = SVM_INST_PUSH, .operand = 15},
-    {.type = SVM_INST_GT, },
+
+    // Check if less than 10.
+    {.type = SVM_INST_DUP, },
+    {.type = SVM_INST_PUSH, .operand = 10},
+    {.type = SVM_INST_LT, },
+
+    // Go back to the start if it is.
+    {.type = SVM_INST_JNZ, .operand = 1},
+
     {.type = SVM_INST_HALT, },
   };
   svm_load_program_from_array(&svm, program, sizeof(program) / sizeof(*program));

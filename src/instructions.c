@@ -6,6 +6,7 @@ const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type)
     case SVM_INST_NOP: return "SVM_INST_NOP";
     case SVM_INST_HALT: return "SVM_INST_HALT";
     case SVM_INST_PUSH: return "SVM_INST_PUSH";
+    case SVM_INST_DUP: return "SVM_INST_DUP";
     case SVM_INST_POP: return "SVM_INST_POP";
     case SVM_INST_ADD: return "SVM_INST_ADD";
     case SVM_INST_SUB: return "SVM_INST_SUB";
@@ -17,6 +18,8 @@ const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type)
     case SVM_INST_GT_EQ: return "SVM_INST_GT_EQ";
     case SVM_INST_LT: return "SVM_INST_LT";
     case SVM_INST_LT_EQ: return "SVM_INST_LT_EQ";
+    case SVM_INST_JMP: return "SVM_INST_JMP";
+    case SVM_INST_JNZ: return "SVM_INST_JNZ";
     default:
       return "Unknown instruction type.";
   }
