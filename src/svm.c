@@ -82,6 +82,48 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack[svm->stack_ptr - 2] /= svm->stack[svm->stack_ptr - 1];
       svm->stack_ptr--;
       break;
+    case SVM_INST_EQ:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] == svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_NOT_EQ:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] != svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] > svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT_EQ:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] >= svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] < svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT_EQ:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = svm->stack[svm->stack_ptr - 2] <= svm->stack[svm->stack_ptr - 1];
+      svm->stack_ptr--;
+      break;
     default:
       return SVM_ERR_ILLEGAL_INSTRUCTION;
       break;
@@ -120,8 +162,10 @@ int main(void)
 
   svm_instruction_t program[] = {
     {.type = SVM_INST_PUSH, .operand = 20},
-    {.type = SVM_INST_PUSH, .operand = 30},
-    {.type = SVM_INST_MULT, },
+    {.type = SVM_INST_PUSH, .operand = 10},
+    {.type = SVM_INST_ADD, },
+    {.type = SVM_INST_PUSH, .operand = 15},
+    {.type = SVM_INST_GT, },
     {.type = SVM_INST_HALT, },
   };
   svm_load_program_from_array(&svm, program, sizeof(program) / sizeof(*program));

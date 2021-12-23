@@ -17,6 +17,14 @@ typedef enum {
   SVM_INST_SUB,
   SVM_INST_MULT,
   SVM_INST_DIV,
+
+  /* Comparison */
+  SVM_INST_EQ,
+  SVM_INST_NOT_EQ,
+  SVM_INST_GT,
+  SVM_INST_GT_EQ,
+  SVM_INST_LT,
+  SVM_INST_LT_EQ,
 } svm_instruction_type_t;
 
 const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type);
