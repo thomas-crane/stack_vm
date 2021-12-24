@@ -14,6 +14,7 @@ typedef enum {
   SVM_INST_PUSH,
   SVM_INST_POP,
   SVM_INST_COPY,
+  SVM_INST_SWAP,
 
   /* Arithmetic. */
   // i64.

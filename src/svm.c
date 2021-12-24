@@ -66,6 +66,18 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack[svm->stack_ptr] = svm->stack[svm->stack_ptr - instruction.operand.as_u64];
       svm->stack_ptr++;
       break;
+    case SVM_INST_SWAP:
+      if (svm->stack_ptr < instruction.operand.as_u64) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      if (instruction.operand.as_u64 == 0) {
+        // stack_ptr points above the top of the stack so an offset of 0 is an overflow.
+        return SVM_ERR_STACK_OVERFLOW;
+      }
+      svm_value_t tmp = svm->stack[svm->stack_ptr - 1];
+      svm->stack[svm->stack_ptr - 1] = svm->stack[svm->stack_ptr - instruction.operand.as_u64];
+      svm->stack[svm->stack_ptr - instruction.operand.as_u64] = tmp;
+      break;
     case  SVM_INST_ADD_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
