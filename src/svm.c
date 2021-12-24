@@ -15,7 +15,11 @@ void svm_init(svm_t *svm)
   svm->stack_ptr = 0;
   
   memset(svm->program, 0, sizeof(svm->program));
+  svm->program_size = 0;
   svm->ip = 0;
+
+  memset(svm->call_stack, 0, sizeof(svm->call_stack));
+  svm->call_stack_ptr = 0;
 }
 
 bool svm_load_program_from_array(svm_t *svm, svm_instruction_t *instructions, uint32_t program_size)
@@ -56,6 +60,9 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack_ptr--;
       break;
     case SVM_INST_COPY:
+      if (svm->stack_ptr >= SVM_STACK_SIZE) {
+        return SVM_ERR_STACK_OVERFLOW;
+      }
       if (svm->stack_ptr < instruction.operand.as_u64) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
@@ -275,6 +282,20 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       }
       svm->stack_ptr--;
       break;
+    case SVM_INST_CALL:
+      if (svm->call_stack_ptr >= SVM_CALL_STACK_SIZE) {
+        return SVM_ERR_CALL_STACK_OVERFLOW;
+      }
+      svm->call_stack[svm->call_stack_ptr++] = svm->ip;
+      svm->ip = instruction.operand.as_u64;
+      break;
+    case SVM_INST_RET:
+      if (svm->call_stack_ptr < 1) {
+        return SVM_ERR_CALL_STACK_UNDERFLOW;
+      }
+      svm->ip = svm->call_stack[svm->call_stack_ptr - 1];
+      svm->call_stack_ptr--;
+      break;
     default:
       return SVM_ERR_ILLEGAL_INSTRUCTION;
       break;
@@ -317,9 +338,9 @@ int main(void)
     // Counter.
     {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(0.0)},
 
-    // Add one.
+    // Add some value.
     {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(1.32)},
-    {.type = SVM_INST_ADD_F, },
+    {.type = SVM_INST_CALL, .operand = SVM_VALUE_U64(8)},
 
     // Check if less than 10.
     {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
@@ -330,6 +351,10 @@ int main(void)
     {.type = SVM_INST_JNZ, .operand = SVM_VALUE_U64(1)},
 
     {.type = SVM_INST_HALT, },
+
+    // add(a: f64, b: f64): f64)
+    {.type = SVM_INST_ADD_F, },
+    {.type = SVM_INST_RET, },
   };
   svm_load_program_from_array(&svm, program, sizeof(program) / sizeof(*program));
 

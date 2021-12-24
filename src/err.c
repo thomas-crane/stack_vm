@@ -8,6 +8,8 @@ const char *svm_err_to_string(svm_err_t err)
     case SVM_ERR_STACK_UNDERFLOW: return "SVM_ERR_STACK_UNDERFLOW";
     case SVM_ERR_ILLEGAL_INSTRUCTION: return "SVM_ERR_ILLEGAL_INSTRUCTION";
     case SVM_ERR_IP_OVERFLOW: return "SVM_ERR_IP_OVERFLOW";
+    case SVM_ERR_CALL_STACK_OVERFLOW: return "SVM_ERR_CALL_STACK_OVERFLOW";
+    case SVM_ERR_CALL_STACK_UNDERFLOW: return "SVM_ERR_CALL_STACK_UNDERFLOW";
     default:
       return "Unknown error";
       break;

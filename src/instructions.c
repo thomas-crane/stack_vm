@@ -46,6 +46,9 @@ const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type)
 
     case SVM_INST_JMP: return "SVM_INST_JMP";
     case SVM_INST_JNZ: return "SVM_INST_JNZ";
+
+    case SVM_INST_CALL: return "SVM_INST_CALL";
+    case SVM_INST_RET: return "SVM_INST_RET";
     default:
       return "Unknown instruction type.";
   }

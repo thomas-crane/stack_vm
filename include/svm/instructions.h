@@ -56,6 +56,10 @@ typedef enum {
   /* Jumps */
   SVM_INST_JMP,
   SVM_INST_JNZ,
+
+  /* Function stuff */
+  SVM_INST_CALL,
+  SVM_INST_RET,
 } svm_instruction_type_t;
 
 const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type);

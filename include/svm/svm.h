@@ -10,16 +10,24 @@
 
 #define SVM_STACK_SIZE 1024
 #define SVM_MAX_PROGRAM_SIZE 1024
+#define SVM_CALL_STACK_SIZE 1024
 
 typedef struct {
+  /* Misc stuff */
   bool halted;
 
+  /* Stack */
   svm_value_t stack[SVM_STACK_SIZE]; 
   uint64_t stack_ptr;
 
+  /* Program */
   svm_instruction_t program[SVM_MAX_PROGRAM_SIZE];
   uint64_t program_size;
   uint64_t ip;
+
+  /* Call stack */
+  uint64_t call_stack[SVM_CALL_STACK_SIZE];
+  uint64_t call_stack_ptr;
 } svm_t;
 
 void svm_init(svm_t *svm);
