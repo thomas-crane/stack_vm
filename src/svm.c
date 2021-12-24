@@ -55,11 +55,15 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       }
       svm->stack_ptr--;
       break;
-    case SVM_INST_DUP:
-      if (svm->stack_ptr < 1) {
+    case SVM_INST_COPY:
+      if (svm->stack_ptr < instruction.operand.as_u64) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
-      svm->stack[svm->stack_ptr] = svm->stack[svm->stack_ptr - 1];
+      if (instruction.operand.as_u64 == 0) {
+        // stack_ptr points above the top of the stack so an offset of 0 is an overflow.
+        return SVM_ERR_STACK_OVERFLOW;
+      }
+      svm->stack[svm->stack_ptr] = svm->stack[svm->stack_ptr - instruction.operand.as_u64];
       svm->stack_ptr++;
       break;
     case  SVM_INST_ADD_I:
@@ -306,7 +310,7 @@ int main(void)
     {.type = SVM_INST_ADD_F, },
 
     // Check if less than 10.
-    {.type = SVM_INST_DUP, },
+    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
     {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(10.0)},
     {.type = SVM_INST_LT_F, },
 

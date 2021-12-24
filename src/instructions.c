@@ -8,7 +8,7 @@ const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type)
 
     case SVM_INST_PUSH: return "SVM_INST_PUSH";
     case SVM_INST_POP: return "SVM_INST_POP";
-    case SVM_INST_DUP: return "SVM_INST_DUP";
+    case SVM_INST_COPY: return "SVM_INST_COPY";
 
     case SVM_INST_ADD_I: return "SVM_INST_ADD_I";
     case SVM_INST_SUB_I: return "SVM_INST_SUB_I";

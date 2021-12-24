@@ -13,7 +13,7 @@ typedef enum {
   /* Stack ops. */
   SVM_INST_PUSH,
   SVM_INST_POP,
-  SVM_INST_DUP,
+  SVM_INST_COPY,
 
   /* Arithmetic. */
   // i64.
