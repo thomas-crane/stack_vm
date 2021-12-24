@@ -2,6 +2,7 @@
 #define HDR_SVM_SVM_H
 
 #include "svm/err.h"
+#include "svm/value.h"
 #include "svm/instructions.h"
 
 #include <stdint.h>
@@ -13,7 +14,7 @@
 typedef struct {
   bool halted;
 
-  int64_t stack[SVM_STACK_SIZE]; 
+  svm_value_t stack[SVM_STACK_SIZE]; 
   uint64_t stack_ptr;
 
   svm_instruction_t program[SVM_MAX_PROGRAM_SIZE];
