@@ -62,32 +62,88 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack[svm->stack_ptr] = svm->stack[svm->stack_ptr - 1];
       svm->stack_ptr++;
       break;
-    case  SVM_INST_ADD:
+    case  SVM_INST_ADD_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2].as_i64 += svm->stack[svm->stack_ptr - 1].as_i64;
       svm->stack_ptr--;
       break;
-    case  SVM_INST_SUB:
+    case  SVM_INST_SUB_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2].as_i64 -= svm->stack[svm->stack_ptr - 1].as_i64;
       svm->stack_ptr--;
       break;
-    case  SVM_INST_MULT:
+    case  SVM_INST_MULT_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2].as_i64 *= svm->stack[svm->stack_ptr - 1].as_i64;
       svm->stack_ptr--;
       break;
-    case  SVM_INST_DIV:
+    case  SVM_INST_DIV_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2].as_i64 /= svm->stack[svm->stack_ptr - 1].as_i64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_ADD_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_u64 += svm->stack[svm->stack_ptr - 1].as_u64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_SUB_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_u64 -= svm->stack[svm->stack_ptr - 1].as_u64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_MULT_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_u64 *= svm->stack[svm->stack_ptr - 1].as_u64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_DIV_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_u64 /= svm->stack[svm->stack_ptr - 1].as_u64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_ADD_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_f64 += svm->stack[svm->stack_ptr - 1].as_f64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_SUB_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_f64 -= svm->stack[svm->stack_ptr - 1].as_f64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_MULT_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_f64 *= svm->stack[svm->stack_ptr - 1].as_f64;
+      svm->stack_ptr--;
+      break;
+    case  SVM_INST_DIV_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2].as_f64 /= svm->stack[svm->stack_ptr - 1].as_f64;
       svm->stack_ptr--;
       break;
     case SVM_INST_EQ:
@@ -104,32 +160,88 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_ptr != svm->stack[svm->stack_ptr - 1].as_ptr);
       svm->stack_ptr--;
       break;
-    case SVM_INST_GT:
+    case SVM_INST_GT_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_i64 > svm->stack[svm->stack_ptr - 1].as_i64);
       svm->stack_ptr--;
       break;
-    case SVM_INST_GT_EQ:
+    case SVM_INST_GT_EQ_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_i64 >= svm->stack[svm->stack_ptr - 1].as_i64);
       svm->stack_ptr--;
       break;
-    case SVM_INST_LT:
+    case SVM_INST_LT_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_i64 < svm->stack[svm->stack_ptr - 1].as_i64);
       svm->stack_ptr--;
       break;
-    case SVM_INST_LT_EQ:
+    case SVM_INST_LT_EQ_I:
       if (svm->stack_ptr < 2) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_i64 <= svm->stack[svm->stack_ptr - 1].as_i64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_u64 > svm->stack[svm->stack_ptr - 1].as_u64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT_EQ_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_u64 >= svm->stack[svm->stack_ptr - 1].as_u64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_u64 < svm->stack[svm->stack_ptr - 1].as_u64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT_EQ_U:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_u64 <= svm->stack[svm->stack_ptr - 1].as_u64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_f64 > svm->stack[svm->stack_ptr - 1].as_f64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_GT_EQ_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_f64 >= svm->stack[svm->stack_ptr - 1].as_f64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_f64 < svm->stack[svm->stack_ptr - 1].as_f64);
+      svm->stack_ptr--;
+      break;
+    case SVM_INST_LT_EQ_F:
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      svm->stack[svm->stack_ptr - 2] = SVM_VALUE_I64(svm->stack[svm->stack_ptr - 2].as_f64 <= svm->stack[svm->stack_ptr - 1].as_f64);
       svm->stack_ptr--;
       break;
     case SVM_INST_JMP:
@@ -187,16 +299,16 @@ int main(void)
 
   svm_instruction_t program[] = {
     // Counter.
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_I64(0)},
+    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(0.0)},
 
     // Add one.
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_I64(1)},
-    {.type = SVM_INST_ADD, },
+    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(1.32)},
+    {.type = SVM_INST_ADD_F, },
 
     // Check if less than 10.
     {.type = SVM_INST_DUP, },
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_I64(10)},
-    {.type = SVM_INST_LT, },
+    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(10.0)},
+    {.type = SVM_INST_LT_F, },
 
     // Go back to the start if it is.
     {.type = SVM_INST_JNZ, .operand = SVM_VALUE_U64(1)},
