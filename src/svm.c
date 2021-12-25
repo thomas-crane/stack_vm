@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 void svm_init(svm_t *svm)
 {
@@ -13,13 +14,16 @@ void svm_init(svm_t *svm)
 
   memset(svm->stack, 0, sizeof(svm->stack));
   svm->stack_ptr = 0;
-  
+
   memset(svm->program, 0, sizeof(svm->program));
   svm->program_size = 0;
   svm->ip = 0;
 
   memset(svm->call_stack, 0, sizeof(svm->call_stack));
   svm->call_stack_ptr = 0;
+
+  memset(svm->heap_addrs, 0, sizeof(svm->heap_addrs));
+  svm->heap_addrs_ptr = 0;
 }
 
 bool svm_load_program_from_array(svm_t *svm, svm_instruction_t *instructions, uint32_t program_size)
@@ -296,6 +300,63 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->ip = svm->call_stack[svm->call_stack_ptr - 1];
       svm->call_stack_ptr--;
       break;
+    case SVM_INST_ALLOC: {
+      if (svm->stack_ptr >= SVM_STACK_SIZE) {
+        return SVM_ERR_STACK_OVERFLOW;
+      }
+      if (svm->heap_addrs_ptr >= SVM_HEAP_ADDRS_SIZE) {
+        return SVM_ERR_ADDR_LIST_FULL;
+      }
+
+      // Allocate the address.
+      void* addr = malloc(instruction.operand.as_u64);
+      memset(addr, 0, instruction.operand.as_u64);
+      svm->heap_addrs[svm->heap_addrs_ptr++] = addr;
+
+      // Put the address on the stack.
+      svm->stack[svm->stack_ptr] = SVM_VALUE_PTR(addr);
+      svm->stack_ptr++;
+      break;
+    }
+    case SVM_INST_FREE:
+      if (svm->stack_ptr < 1) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      // Find the address.
+      void* addr = svm->stack[svm->stack_ptr - 1].as_ptr;
+      if (addr == NULL) {
+        return SVM_ERR_ILLEGAL_FREE;
+      }
+      bool found = false;
+      uint64_t addr_idx;
+      for (addr_idx = 0; addr_idx < SVM_HEAP_ADDRS_SIZE; addr_idx++) {
+        // If we get to a NULL addr we can stop.
+        if (svm->heap_addrs[addr_idx] == NULL) {
+          break;
+        }
+        if (svm->heap_addrs[addr_idx] == addr) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return SVM_ERR_ILLEGAL_FREE;
+      }
+      // Pop the addr from the stack and free it.
+      svm->stack_ptr--;
+      free(addr);
+
+      // Best case scenario is that the free'd addr was at the end.
+      if (addr_idx == svm->heap_addrs_ptr - 1) {
+        svm->heap_addrs_ptr--;
+        break;
+      }
+
+      // If it's not, we need to shift all the addrs that are past it down by one.
+      uint64_t remaining_addrs = svm->heap_addrs_ptr - 1 - addr_idx;
+      memmove(&svm->heap_addrs[addr_idx], &svm->heap_addrs[addr_idx + 1], remaining_addrs * sizeof(addr));
+      svm->heap_addrs_ptr--;
+      break;
     default:
       return SVM_ERR_ILLEGAL_INSTRUCTION;
       break;
@@ -310,6 +371,11 @@ svm_err_t svm_run(svm_t *svm) {
     if (err != SVM_ERR_OK) {
       return err;
     }
+  }
+  if (svm->heap_addrs_ptr != 0) {
+    char* plural_char = svm->heap_addrs_ptr == 1 ? "" : "es";
+    fprintf(stderr, "WARNING: %li address%s leaked.\n", svm->heap_addrs_ptr, plural_char);
+    svm_print_addr_list(svm);
   }
   return SVM_ERR_OK;
 }
@@ -329,32 +395,54 @@ void svm_print_stack(svm_t *svm)
   }
 }
 
+void svm_print_addr_list(svm_t *svm)
+{
+  printf("Addrs: \n");
+  if (svm->heap_addrs_ptr == 0) {
+    printf("  [empty]\n");
+  } else {
+    for (uint64_t i = 0; i < svm->heap_addrs_ptr; i++) {
+      printf("  %p\n", svm->heap_addrs[i]);
+    }
+  }
+}
+
 int main(void)
 {
   svm_t svm;
   svm_init(&svm);
 
   svm_instruction_t program[] = {
-    // Counter.
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(0.0)},
+    // // Counter.
+    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(0.0)},
 
-    // Add some value.
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(1.32)},
-    {.type = SVM_INST_CALL, .operand = SVM_VALUE_U64(8)},
+    // // Add some value.
+    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(1.32)},
+    // {.type = SVM_INST_CALL, .operand = SVM_VALUE_U64(8)},
 
-    // Check if less than 10.
-    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(10.0)},
-    {.type = SVM_INST_LT_F, },
+    // // Check if less than 10.
+    // {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
+    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(10.0)},
+    // {.type = SVM_INST_LT_F, },
 
-    // Go back to the start if it is.
-    {.type = SVM_INST_JNZ, .operand = SVM_VALUE_U64(1)},
+    // // Go back to the start if it is.
+    // {.type = SVM_INST_JNZ, .operand = SVM_VALUE_U64(1)},
 
+    // {.type = SVM_INST_HALT, },
+
+    // // add(a: f64, b: f64): f64)
+    // {.type = SVM_INST_ADD_F, },
+    // {.type = SVM_INST_RET, },
+
+
+
+    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
+    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
+    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
+    {.type = SVM_INST_FREE, },
+    {.type = SVM_INST_FREE, },
+    {.type = SVM_INST_FREE, },
     {.type = SVM_INST_HALT, },
-
-    // add(a: f64, b: f64): f64)
-    {.type = SVM_INST_ADD_F, },
-    {.type = SVM_INST_RET, },
   };
   svm_load_program_from_array(&svm, program, sizeof(program) / sizeof(*program));
 

@@ -49,6 +49,9 @@ const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type)
 
     case SVM_INST_CALL: return "SVM_INST_CALL";
     case SVM_INST_RET: return "SVM_INST_RET";
+
+    case SVM_INST_ALLOC: return "SVM_INST_ALLOC";
+    case SVM_INST_FREE: return "SVM_INST_FREE";
     default:
       return "Unknown instruction type.";
   }

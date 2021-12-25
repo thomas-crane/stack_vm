@@ -3,12 +3,18 @@
 
 typedef enum {
   SVM_ERR_OK,
+
   SVM_ERR_STACK_OVERFLOW,
   SVM_ERR_STACK_UNDERFLOW,
+
   SVM_ERR_ILLEGAL_INSTRUCTION,
   SVM_ERR_IP_OVERFLOW,
+
   SVM_ERR_CALL_STACK_OVERFLOW,
   SVM_ERR_CALL_STACK_UNDERFLOW,
+
+  SVM_ERR_ADDR_LIST_FULL,
+  SVM_ERR_ILLEGAL_FREE,
 } svm_err_t;
 
 const char *svm_err_to_string(svm_err_t err);

@@ -11,13 +11,14 @@
 #define SVM_STACK_SIZE 1024
 #define SVM_MAX_PROGRAM_SIZE 1024
 #define SVM_CALL_STACK_SIZE 1024
+#define SVM_HEAP_ADDRS_SIZE 1024
 
 typedef struct {
   /* Misc stuff */
   bool halted;
 
   /* Stack */
-  svm_value_t stack[SVM_STACK_SIZE]; 
+  svm_value_t stack[SVM_STACK_SIZE];
   uint64_t stack_ptr;
 
   /* Program */
@@ -28,6 +29,10 @@ typedef struct {
   /* Call stack */
   uint64_t call_stack[SVM_CALL_STACK_SIZE];
   uint64_t call_stack_ptr;
+
+  /* Heap storage */
+  void* heap_addrs[SVM_HEAP_ADDRS_SIZE];
+  uint64_t heap_addrs_ptr;
 } svm_t;
 
 void svm_init(svm_t *svm);
@@ -37,5 +42,6 @@ svm_err_t svm_exec_instruction(svm_t *svm);
 svm_err_t svm_run(svm_t *svm);
 
 void svm_print_stack(svm_t *svm);
+void svm_print_addr_list(svm_t *svm);
 
 #endif // HDR_SVM_SVM_H
