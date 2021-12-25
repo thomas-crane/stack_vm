@@ -64,6 +64,8 @@ typedef enum {
   /* Heap stuff */
   SVM_INST_ALLOC,
   SVM_INST_FREE,
+  SVM_INST_READ,
+  SVM_INST_WRITE,
 } svm_instruction_type_t;
 
 const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type);

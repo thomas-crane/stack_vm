@@ -15,7 +15,7 @@ const char *svm_err_to_string(svm_err_t err)
     case SVM_ERR_CALL_STACK_UNDERFLOW: return "SVM_ERR_CALL_STACK_UNDERFLOW";
 
     case SVM_ERR_ADDR_LIST_FULL: return "SVM_ERR_ADDR_LIST_FULL";
-    case SVM_ERR_ILLEGAL_FREE: return "SVM_ERR_ILLEGAL_FREE";
+    case SVM_ERR_ILLEGAL_ADDR: return "SVM_ERR_ILLEGAL_ADDR";
     default:
       return "Unknown error";
       break;

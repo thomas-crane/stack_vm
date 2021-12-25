@@ -8,6 +8,23 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+static bool find_addr(svm_t *svm, void *addr, uint64_t *idx);
+
+static bool find_addr(svm_t *svm, void *addr, uint64_t *idx)
+{
+  for (uint64_t i = 0; i < SVM_HEAP_ADDRS_SIZE; i++) {
+    // If we get to a NULL addr we can stop.
+    if (svm->heap_addrs[i] == NULL) {
+      return false;
+    }
+    if (svm->heap_addrs[i] == addr) {
+      *idx = i;
+      return true;
+    }
+  }
+  return false;
+}
+
 void svm_init(svm_t *svm)
 {
   svm->halted = false;
@@ -86,8 +103,8 @@ svm_err_t svm_exec_instruction(svm_t *svm)
         return SVM_ERR_STACK_OVERFLOW;
       }
       svm_value_t tmp = svm->stack[svm->stack_ptr - 1];
-      svm->stack[svm->stack_ptr - 1] = svm->stack[svm->stack_ptr - instruction.operand.as_u64];
-      svm->stack[svm->stack_ptr - instruction.operand.as_u64] = tmp;
+      svm->stack[svm->stack_ptr - 1] = svm->stack[svm->stack_ptr - instruction.operand.as_u64 - 1];
+      svm->stack[svm->stack_ptr - instruction.operand.as_u64 - 1] = tmp;
       break;
     case  SVM_INST_ADD_I:
       if (svm->stack_ptr < 2) {
@@ -318,30 +335,21 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       svm->stack_ptr++;
       break;
     }
-    case SVM_INST_FREE:
+    case SVM_INST_FREE: {
       if (svm->stack_ptr < 1) {
         return SVM_ERR_STACK_UNDERFLOW;
       }
       // Find the address.
       void* addr = svm->stack[svm->stack_ptr - 1].as_ptr;
       if (addr == NULL) {
-        return SVM_ERR_ILLEGAL_FREE;
+        return SVM_ERR_ILLEGAL_ADDR;
       }
-      bool found = false;
       uint64_t addr_idx;
-      for (addr_idx = 0; addr_idx < SVM_HEAP_ADDRS_SIZE; addr_idx++) {
-        // If we get to a NULL addr we can stop.
-        if (svm->heap_addrs[addr_idx] == NULL) {
-          break;
-        }
-        if (svm->heap_addrs[addr_idx] == addr) {
-          found = true;
-          break;
-        }
-      }
+      bool found = find_addr(svm, addr, &addr_idx);
       if (!found) {
-        return SVM_ERR_ILLEGAL_FREE;
+        return SVM_ERR_ILLEGAL_ADDR;
       }
+
       // Pop the addr from the stack and free it.
       svm->stack_ptr--;
       free(addr);
@@ -357,6 +365,29 @@ svm_err_t svm_exec_instruction(svm_t *svm)
       memmove(&svm->heap_addrs[addr_idx], &svm->heap_addrs[addr_idx + 1], remaining_addrs * sizeof(addr));
       svm->heap_addrs_ptr--;
       break;
+    }
+    case SVM_INST_READ: {
+      if (svm->stack_ptr < 1) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      void* addr = svm->stack[svm->stack_ptr - 1].as_ptr;
+      uint64_t addr_idx;
+      bool found = find_addr(svm, addr, &addr_idx);
+      if (!found) {
+        return SVM_ERR_ILLEGAL_ADDR;
+      }
+      memcpy(&svm->stack[svm->stack_ptr - 1], addr, sizeof(svm_value_t));
+      break;
+    }
+    case SVM_INST_WRITE: {
+      if (svm->stack_ptr < 2) {
+        return SVM_ERR_STACK_UNDERFLOW;
+      }
+      void* addr = svm->stack[svm->stack_ptr - 2].as_ptr;
+      memcpy(addr, &svm->stack[svm->stack_ptr - 1], sizeof(svm_value_t));
+      svm->stack_ptr -= 2;
+      break;
+    }
     default:
       return SVM_ERR_ILLEGAL_INSTRUCTION;
       break;
@@ -436,11 +467,20 @@ int main(void)
 
 
 
-    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_FREE, },
-    {.type = SVM_INST_FREE, },
+    // Alloc 8 bytes.
+    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(8)},
+
+    // Store 101010.
+    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
+    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_U64(101010)},
+    {.type = SVM_INST_WRITE},
+
+    // Read it back onto the stack.
+    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
+    {.type = SVM_INST_READ},
+
+    // Bring addr back to the top of the stack to free.
+    {.type = SVM_INST_SWAP, .operand = SVM_VALUE_U64(1)},
     {.type = SVM_INST_FREE, },
     {.type = SVM_INST_HALT, },
   };
