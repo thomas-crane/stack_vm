@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <libgen.h>
 
 static void usage()
 {
@@ -14,14 +15,14 @@ static void usage()
   fprintf(stderr, "Compile the given svm assembly file into an svm binary.\n");
 }
 
-static svm_label_list_t *translate_labels(FILE *fd)
+static svm_label_list_t *translate_labels(FILE *in_fd)
 {
   char line[256];
   svm_label_list_t* list = NULL;
   uint32_t lineno = 0;
   uint64_t num_labels = 0;
 
-  while (fgets(line, sizeof(line), fd)) {
+  while (fgets(line, sizeof(line), in_fd)) {
     char *token = strtok(line, " \n");
     if (token == NULL) {
       continue;
@@ -40,7 +41,7 @@ static svm_label_list_t *translate_labels(FILE *fd)
     }
     lineno++;
   }
-  rewind(fd);
+  rewind(in_fd);
 
   return list;
 }
@@ -122,22 +123,38 @@ int main (int argc, char *argv[])
     return 1;
   }
 
-  const char *input_file = argv[1];
-  FILE *fd = fopen(input_file, "r");
-  if (fd == NULL) {
+  char *input_file = argv[1];
+  char output_file[256] = {0};
+  char *in_name = strdup(input_file);
+  int in_len = strlen(in_name);
+  for (int64_t i = in_len - 1; i >= 0; i--) {
+    if (in_name[i] == '.') {
+      memset(&in_name[i], 0, in_len - i - 1);
+      break;
+    }
+  }
+  sprintf(output_file, "%s.svmo", basename(in_name));
+  free(in_name);
+
+  FILE *in_fd = fopen(input_file, "r");
+  if (in_fd == NULL) {
     fprintf(stderr, "Error: Failed to open input file '%s'\n", input_file);
     return 1;
   }
 
-  svm_label_list_t *labels = translate_labels(fd);
-  if (labels != NULL) {
-    svm_label_list_print(labels);
+  FILE *out_fd = fopen(output_file, "w");
+  if (out_fd == NULL) {
+    fprintf(stderr, "Error: Failed to open output file '%s'\n", output_file);
+    fclose(in_fd);
+    return 1;
   }
+
+  svm_label_list_t *labels = translate_labels(in_fd);
 
   int exitcode = 0;
   char line[256];
   uint64_t lineno = 0;
-  while (fgets(line, sizeof(line), fd)) {
+  while (fgets(line, sizeof(line), in_fd)) {
     lineno++;
     char *token = strtok(line, " \n");
     if (token == NULL) {
@@ -155,6 +172,14 @@ int main (int argc, char *argv[])
     if (!svm_instruction_type_from_string(token, &type)) {
       fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
       fprintf(stderr, "  Expected an instruction, got '%s'\n", token);
+      exitcode = 1;
+      goto cleanup;
+    }
+
+    uint64_t type_value = (uint64_t)type;
+    if (fwrite(&type_value, sizeof(type_value), 1, out_fd) == 0) {
+      fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+      fprintf(stderr, "  Cannot write type value to output file.");
       exitcode = 1;
       goto cleanup;
     }
@@ -208,6 +233,13 @@ int main (int argc, char *argv[])
           }
           break;
       }
+
+      if (fwrite(&value.as_u64, sizeof(value), 1, out_fd) == 0) {
+        fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+        fprintf(stderr, "  Cannot write operand value to output file.");
+        exitcode = 1;
+        goto cleanup;
+      }
     }
   }
 
@@ -215,7 +247,8 @@ cleanup:
   if (labels != NULL) {
     svm_label_list_free(labels);
   }
-  fclose(fd);
+  fclose(in_fd);
+  fclose(out_fd);
 
   return exitcode;
 }
