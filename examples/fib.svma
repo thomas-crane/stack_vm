@@ -1,0 +1,36 @@
+; Get the 9th number in the sequence (0 indexed).
+push 9
+call fib
+halt
+
+; fib(n: i64): i64
+fib:
+  ; if n == 0
+  copy 1
+  push 0
+  neq
+  jnz not_0
+  ret
+not_0:
+  ; if n == 1
+  copy 1
+  push 1
+  neq
+  jnz not_1
+  ret
+not_1:
+  ; push fib(n - 1)
+  copy 1
+  push 1
+  subi
+  call fib
+  ; push fib(n - 1)
+  copy 2
+  push 2
+  subi
+  call fib
+  addi
+  ; Remove arg.
+  swap 1
+  pop
+  ret
