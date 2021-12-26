@@ -43,6 +43,7 @@ svm_label_list_t *svm_label_list_find(svm_label_list_t *list, const char *label)
     if (strncmp(label, current->label, strlen(label)) == 0) {
       return current;
     }
+    current = current->next;
   } while (current != NULL);
 
   return NULL;
