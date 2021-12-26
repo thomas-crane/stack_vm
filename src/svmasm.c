@@ -19,10 +19,15 @@ static svm_label_list_t *translate_labels(FILE *in_fd)
 {
   char line[256];
   svm_label_list_t* list = NULL;
-  uint32_t lineno = 0;
+  uint64_t instruction_cnt = 0;
   uint64_t num_labels = 0;
 
   while (fgets(line, sizeof(line), in_fd)) {
+    // Skip empty lines.
+    if (strlen(line) == 1) {
+      continue;
+    }
+
     char *token = strtok(line, " \n");
     if (token == NULL) {
       continue;
@@ -32,14 +37,18 @@ static svm_label_list_t *translate_labels(FILE *in_fd)
       // Cut off the ':'.
       token[token_len - 1] = '\0';
       if (list == NULL) {
-        list = svm_label_list_new(token, lineno - num_labels);
+        list = svm_label_list_new(token, instruction_cnt - num_labels);
       } else {
-        svm_label_list_t *node = svm_label_list_new(token, lineno - num_labels);
+        svm_label_list_t *node = svm_label_list_new(token, instruction_cnt - num_labels);
         svm_label_list_append(list, node);
       }
       num_labels++;
     }
-    lineno++;
+    // Check for comment. 
+    if (token[0] == ';') {
+      continue;
+    }
+    instruction_cnt++;
   }
   rewind(in_fd);
 
@@ -156,11 +165,24 @@ int main (int argc, char *argv[])
   uint64_t lineno = 0;
   while (fgets(line, sizeof(line), in_fd)) {
     lineno++;
+    // Skip empty lines.
+    if (strlen(line) == 1) {
+      continue;
+    }
+
     char *token = strtok(line, " \n");
     if (token == NULL) {
+      fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+      fprintf(stderr, "  Expected a token, got '%s'\n", token);
       exitcode = 1;
       goto cleanup;
     }
+
+    // Skip comments.
+    if (token[0] == ';') {
+      continue;
+    }
+
 
     // Ignore labels.
     if (token[strlen(token) - 1] == ':') {
@@ -204,34 +226,33 @@ int main (int argc, char *argv[])
         }
 
         value.as_u64 = label->address;
-        continue;
-      }
-      
-      switch (token[strlen(token) - 1]) {
-        case 'f':
-          if (!parse_f64(token, &value.as_f64)) {
-            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-            fprintf(stderr, "  Cannot parse f64 '%s'\n", token);
-            exitcode = 1;
-            goto cleanup;
-          }
-          break;
-        case 'u':
-          if (!parse_u64(token, &value.as_u64)) {
-            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-            fprintf(stderr, "  Cannot parse u64 '%s'\n", token);
-            exitcode = 1;
-            goto cleanup;
-          }
-          break;
-        default:
-          if (!parse_i64(token, &value.as_i64)) {
-            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-            fprintf(stderr, "  Cannot parse i64 '%s'\n", token);
-            exitcode = 1;
-            goto cleanup;
-          }
-          break;
+      } else {
+        switch (token[strlen(token) - 1]) {
+          case 'f':
+            if (!parse_f64(token, &value.as_f64)) {
+              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+              fprintf(stderr, "  Cannot parse f64 '%s'\n", token);
+              exitcode = 1;
+              goto cleanup;
+            }
+            break;
+          case 'u':
+            if (!parse_u64(token, &value.as_u64)) {
+              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+              fprintf(stderr, "  Cannot parse u64 '%s'\n", token);
+              exitcode = 1;
+              goto cleanup;
+            }
+            break;
+          default:
+            if (!parse_i64(token, &value.as_i64)) {
+              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+              fprintf(stderr, "  Cannot parse i64 '%s'\n", token);
+              exitcode = 1;
+              goto cleanup;
+            }
+            break;
+        }
       }
 
       if (fwrite(&value.as_u64, sizeof(value), 1, out_fd) == 0) {
