@@ -1,34 +1,20 @@
-# Thanks to https://stackoverflow.com/a/30602701
-
-SRC_DIR := src
-OBJ_DIR := obj
 BIN_DIR := bin
 
-EXE := $(BIN_DIR)/svm
+SVM_LIB_SRC := src/err.c src/instructions.c src/label_list.c
+SVM_LIB_HDRS := include/svm/err.h include/svm/instructions.h include/svm/value.h include/svm/label_list.h
 
-SRC := $(wildcard $(SRC_DIR)/*.c)
-OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-
-CPPFLAGS := -Iinclude -MMD -MP
+CPPFLAGS := -Iinclude
 CFLAGS := -Werror -Wall -Wextra -Wpedantic -Wswitch-enum
 
 .PHONY: all clean
 
-all: $(EXE)
+all: $(BIN_DIR)/svm $(BIN_DIR)/svmasm
 
-$(EXE): $(OBJ) | $(BIN_DIR)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+$(BIN_DIR)/%: src/%.c $(SVM_LIB_SRC) $(SVM_LIB_HDRS) | $(BIN_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(SVM_LIB_SRC)
 
 $(BIN_DIR):
 	mkdir -p $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR):
-	mkdir -p $@
-
 clean:
-	rm -rv $(BIN_DIR) $(OBJ_DIR)
-
--include $(OBJ:.o=.d)
+	rm -rv $(BIN_DIR)
