@@ -1,12 +1,12 @@
-#include "svm/svmasm.h"
-
 #include "svm/svm.h"
 #include "svm/label_list.h"
 #include "svm/instructions.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 static void usage()
 {
@@ -45,6 +45,63 @@ static svm_label_list_t *translate_labels(FILE *fd)
   return list;
 }
 
+static bool parse_f64(const char *token, double *f64)
+{
+  char *endptr;
+
+  errno = 0;
+  double value = strtod(token, &endptr);
+
+  if (errno != 0) {
+    return false;
+  }
+
+  if (endptr == token) {
+    return false;
+  }
+
+  *f64 = value;
+  return true;
+}
+
+static bool parse_i64(const char *token, int64_t *i64)
+{
+  char *endptr;
+
+  errno = 0;
+  int64_t value = strtol(token, &endptr, 10);
+
+  if (errno != 0) {
+    return false;
+  }
+
+  if (endptr == token) {
+    return false;
+  }
+
+  *i64 = value;
+  return true;
+}
+
+static bool parse_u64(const char *token, uint64_t *u64)
+{
+  char *endptr;
+
+  errno = 0;
+  uint64_t value = strtoul(token, &endptr, 10);
+
+  if (errno != 0) {
+    return false;
+  }
+
+  if (endptr == token) {
+    return false;
+  }
+
+  *u64 = value;
+  return true;
+}
+
 int main (int argc, char *argv[])
 {
   for (int i = 0; i < argc; i++) {
@@ -77,26 +134,88 @@ int main (int argc, char *argv[])
     svm_label_list_print(labels);
   }
 
+  int exitcode = 0;
   char line[256];
-  uint32_t lineno = 0;
+  uint64_t lineno = 0;
   while (fgets(line, sizeof(line), fd)) {
+    lineno++;
     char *token = strtok(line, " \n");
-    while (token) {
-      svm_instruction_type_t type;
-      if (svm_instruction_type_from_string(token, &type)) {
-        printf("Got instruction type: %s\n", svm_instruction_type_to_string(type));
-      }
-
-      token = strtok(NULL, " \n");
+    if (token == NULL) {
+      exitcode = 1;
+      goto cleanup;
     }
 
-    lineno++;
+    // Ignore labels.
+    if (token[strlen(token) - 1] == ':') {
+      continue;
+    }
+
+    // Check for instruction.
+    svm_instruction_type_t type;
+    if (!svm_instruction_type_from_string(token, &type)) {
+      fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+      fprintf(stderr, "  Expected an instruction, got '%s'\n", token);
+      exitcode = 1;
+      goto cleanup;
+    }
+
+    if (svm_instruction_type_needs_operand(type)) {
+      token = strtok(NULL, " \n");
+      if (token == NULL) {
+        exitcode = 1;
+        goto cleanup;
+      }
+
+      svm_value_t value = {0};
+      // Check if we should be looking up a label.
+      if (svm_instruction_type_needs_label_operand(type)) {
+        // parse label.
+        svm_label_list_t *label = svm_label_list_find(labels, token);
+        if (label == NULL) {
+          fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+          fprintf(stderr, "  Unknown label '%s'\n", token);
+          exitcode = 1;
+          goto cleanup;
+        }
+
+        value.as_u64 = label->address;
+        continue;
+      }
+      
+      switch (token[strlen(token) - 1]) {
+        case 'f':
+          if (!parse_f64(token, &value.as_f64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse f64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+        case 'u':
+          if (!parse_u64(token, &value.as_u64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse u64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+        default:
+          if (!parse_i64(token, &value.as_i64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse i64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+      }
+    }
   }
 
+cleanup:
   if (labels != NULL) {
     svm_label_list_free(labels);
   }
   fclose(fd);
 
-  return 0;
+  return exitcode;
 }
