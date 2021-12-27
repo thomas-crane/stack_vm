@@ -75,8 +75,8 @@ bool svm_load_program_from_file(svm_t *svm, const char *file_name)
     if (num_read < 1) {
       break;
     }
-
     svm_instruction_type_t type = (svm_instruction_type_t)type_value;
+
     svm_value_t operand;
     if (svm_instruction_type_needs_operand(type)) {
       num_read = fread(&operand, 1, sizeof(operand), fd);
