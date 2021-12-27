@@ -10,6 +10,9 @@ CFLAGS := -Werror -Wall -Wextra -Wpedantic -Wswitch-enum
 
 all: $(BIN_DIR)/svm $(BIN_DIR)/svmasm
 
+release: CFLAGS += -O3
+release: all
+
 $(BIN_DIR)/%: src/%.c $(SVM_LIB_SRC) $(SVM_LIB_HDRS) | $(BIN_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(SVM_LIB_SRC)
 
