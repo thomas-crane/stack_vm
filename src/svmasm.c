@@ -176,7 +176,7 @@ int main (int argc, char *argv[])
     char *token = strtok(line, " \n");
     if (token == NULL) {
       fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-      fprintf(stderr, "  Expected a token, got '%s'\n", token);
+      fprintf(stderr, "  Expected a token, got nothing\n");
       exitcode = 1;
       goto cleanup;
     }
