@@ -69,7 +69,7 @@ bool svm_load_program_from_file(svm_t *svm, const char *file_name)
   }
 
   uint64_t cnt = 0;
-  while (true) {
+  while (cnt < SVM_MAX_PROGRAM_SIZE) {
     uint64_t type_value;
     size_t num_read = fread(&type_value, 1, sizeof(type_value), fd);
     if (num_read < 1) {
