@@ -142,7 +142,7 @@ int main (int argc, char *argv[])
       break;
     }
   }
-  sprintf(output_file, "%s.svmo", basename(in_name));
+  sprintf(output_file, "%s.svmo", in_name);
   free(in_name);
 
   FILE *in_fd = fopen(input_file, "r");
