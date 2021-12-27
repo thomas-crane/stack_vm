@@ -15,14 +15,18 @@ svm_label_list_t *svm_label_list_new(const char *label, uint64_t address)
   return label_list;
 }
 
-void svm_label_list_free(svm_label_list_t *label_list)
+void svm_label_list_free(svm_label_list_t *list)
 {
-  free(label_list->label);
-  if (label_list->next != NULL) {
-    svm_label_list_free(label_list->next);
+  if (list == NULL) {
+    return;
   }
 
-  free(label_list);
+  free(list->label);
+  if (list->next != NULL) {
+    svm_label_list_free(list->next);
+  }
+
+  free(list);
 }
 
 
@@ -38,6 +42,10 @@ void svm_label_list_append(svm_label_list_t *list, svm_label_list_t *node)
 
 svm_label_list_t *svm_label_list_find(svm_label_list_t *list, const char *label)
 {
+  if (list == NULL) {
+    return NULL;
+  }
+
   svm_label_list_t *current = list;
   do {
     if (strncmp(label, current->label, strlen(label)) == 0) {

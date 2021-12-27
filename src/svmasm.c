@@ -134,6 +134,8 @@ int main (int argc, char *argv[])
 
   char *input_file = argv[1];
   char output_file[256] = {0};
+
+  // Copy the input file name so we can strip the extension off.
   char *in_name = strdup(input_file);
   int in_len = strlen(in_name);
   for (int64_t i = in_len - 1; i >= 0; i--) {
@@ -142,6 +144,7 @@ int main (int argc, char *argv[])
       break;
     }
   }
+  // Add the new extension for the output file name.
   sprintf(output_file, "%s.svmo", in_name);
   free(in_name);
 
@@ -183,13 +186,12 @@ int main (int argc, char *argv[])
       continue;
     }
 
-
     // Ignore labels.
     if (token[strlen(token) - 1] == ':') {
       continue;
     }
 
-    // Check for instruction.
+    // Read an instruction.
     svm_instruction_type_t type;
     if (!svm_instruction_type_from_string(token, &type)) {
       fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
@@ -198,6 +200,7 @@ int main (int argc, char *argv[])
       goto cleanup;
     }
 
+    // Write the instruction to the output.
     uint64_t type_value = (uint64_t)type;
     if (fwrite(&type_value, sizeof(type_value), 1, out_fd) == 0) {
       fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
@@ -206,68 +209,74 @@ int main (int argc, char *argv[])
       goto cleanup;
     }
 
-    if (svm_instruction_type_needs_operand(type)) {
-      token = strtok(NULL, " \n");
-      if (token == NULL) {
-        exitcode = 1;
-        goto cleanup;
-      }
+    // Go to the next line if we don't need an operand.
+    if (!svm_instruction_type_needs_operand(type)) {
+      continue;
+    }
 
-      svm_value_t value = {0};
-      // Check if we should be looking up a label.
-      if (svm_instruction_type_needs_label_operand(type)) {
-        // parse label.
-        svm_label_list_t *label = svm_label_list_find(labels, token);
-        if (label == NULL) {
-          fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-          fprintf(stderr, "  Unknown label '%s'\n", token);
-          exitcode = 1;
-          goto cleanup;
-        }
+    token = strtok(NULL, " \n");
+    if (token == NULL) {
+      fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+      fprintf(stderr, "  Expected an operand after '%s' instruction.\n", svm_instruction_type_to_string(type));
+      exitcode = 1;
+      goto cleanup;
+    }
 
-        value.as_u64 = label->address;
-      } else {
-        switch (token[strlen(token) - 1]) {
-          case 'f':
-            if (!parse_f64(token, &value.as_f64)) {
-              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-              fprintf(stderr, "  Cannot parse f64 '%s'\n", token);
-              exitcode = 1;
-              goto cleanup;
-            }
-            break;
-          case 'u':
-            if (!parse_u64(token, &value.as_u64)) {
-              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-              fprintf(stderr, "  Cannot parse u64 '%s'\n", token);
-              exitcode = 1;
-              goto cleanup;
-            }
-            break;
-          default:
-            if (!parse_i64(token, &value.as_i64)) {
-              fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-              fprintf(stderr, "  Cannot parse i64 '%s'\n", token);
-              exitcode = 1;
-              goto cleanup;
-            }
-            break;
-        }
-      }
+    svm_value_t value = {0};
 
-      if (fwrite(&value.as_u64, sizeof(value), 1, out_fd) == 0) {
+    // Check if we should be looking up a label.
+    if (svm_instruction_type_needs_label_operand(type)) {
+      // Parse label.
+      svm_label_list_t *label = svm_label_list_find(labels, token);
+      if (label == NULL) {
         fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
-        fprintf(stderr, "  Cannot write operand value to output file.");
+        fprintf(stderr, "  Unknown label '%s'\n", token);
         exitcode = 1;
         goto cleanup;
       }
+
+      value.as_u64 = label->address;
+    } else {
+      // If its not a label then use the letter after the number to work out what kind of number it is.
+      switch (token[strlen(token) - 1]) {
+        case 'f':
+          if (!parse_f64(token, &value.as_f64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse f64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+        case 'u':
+          if (!parse_u64(token, &value.as_u64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse u64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+        default:
+          if (!parse_i64(token, &value.as_i64)) {
+            fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+            fprintf(stderr, "  Cannot parse i64 '%s'\n", token);
+            exitcode = 1;
+            goto cleanup;
+          }
+          break;
+      }
+    }
+
+    // Write the value to the output.
+    if (fwrite(&value.as_u64, sizeof(value), 1, out_fd) == 0) {
+      fprintf(stderr, "Error: %s:%lu\n", input_file, lineno);
+      fprintf(stderr, "  Cannot write operand value to output file.");
+      exitcode = 1;
+      goto cleanup;
     }
   }
 
 cleanup:
-  if (labels != NULL) {
-    svm_label_list_free(labels);
-  }
+  svm_label_list_free(labels);
   fclose(in_fd);
   fclose(out_fd);
 
