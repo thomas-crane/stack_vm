@@ -25,12 +25,9 @@ not_1:
   subi
   call fib
   ; push fib(n - 1)
-  copy 2
+  swap 1
   push 2
   subi
   call fib
   addi
-  ; Remove arg.
-  swap 1
-  pop
   ret
