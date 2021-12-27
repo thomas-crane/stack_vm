@@ -8,7 +8,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-static bool find_addr(svm_t *svm, void *addr, uint64_t *idx);
+static void usage()
+{
+  fprintf(stderr, "Usage: svm [FILE]\n");
+  fprintf(stderr, "Run the given binary file on the SVM.\n");
+}
 
 static bool find_addr(svm_t *svm, void *addr, uint64_t *idx)
 {
@@ -51,6 +55,42 @@ bool svm_load_program_from_array(svm_t *svm, svm_instruction_t *instructions, ui
 
   svm->program_size = program_size;
   memcpy(svm->program, instructions, program_size * sizeof(*instructions));
+  return true;
+}
+
+bool svm_load_program_from_file(svm_t *svm, const char *file_name)
+{
+  FILE *fd;
+
+  fd = fopen(file_name, "r");
+  if (fd == NULL) {
+    fprintf(stderr, "Error: Cannot open '%s'\n", file_name);
+    return false;
+  }
+
+  uint64_t cnt = 0;
+  while (cnt < SVM_MAX_PROGRAM_SIZE) {
+    uint64_t type_value;
+    size_t num_read = fread(&type_value, 1, sizeof(type_value), fd);
+    if (num_read < 1) {
+      break;
+    }
+    svm_instruction_type_t type = (svm_instruction_type_t)type_value;
+
+    svm_value_t operand;
+    if (svm_instruction_type_needs_operand(type)) {
+      num_read = fread(&operand, 1, sizeof(operand), fd);
+      if (num_read < 1) {
+        break;
+      }
+    }
+
+    svm->program[cnt] = (svm_instruction_t){.type = type, .operand = operand};
+    cnt++;
+  }
+  svm->program_size = cnt;
+
+  fclose(fd);
   return true;
 }
 
@@ -438,57 +478,37 @@ void svm_print_addr_list(svm_t *svm)
   }
 }
 
-int main(void)
+int main (int argc, char *argv[])
 {
+  for (int i = 0; i < argc; i++) {
+    if (strncmp(argv[i], "--help", 6) == 0) {
+      usage();
+      return 0;
+    }
+  }
+
+  if (argc < 2) {
+    fprintf(stderr, "Error: No input file.\n");
+    usage();
+    return 1;
+  }
+  if (argc > 2) {
+    fprintf(stderr, "Error: Too many arguments.\n");
+    usage();
+    return 1;
+  }
   svm_t svm;
   svm_init(&svm);
 
-  svm_instruction_t program[] = {
-    // // Counter.
-    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(0.0)},
-
-    // // Add some value.
-    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(1.32)},
-    // {.type = SVM_INST_CALL, .operand = SVM_VALUE_U64(8)},
-
-    // // Check if less than 10.
-    // {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
-    // {.type = SVM_INST_PUSH, .operand = SVM_VALUE_F64(10.0)},
-    // {.type = SVM_INST_LT_F, },
-
-    // // Go back to the start if it is.
-    // {.type = SVM_INST_JNZ, .operand = SVM_VALUE_U64(1)},
-
-    // {.type = SVM_INST_HALT, },
-
-    // // add(a: f64, b: f64): f64)
-    // {.type = SVM_INST_ADD_F, },
-    // {.type = SVM_INST_RET, },
-
-
-
-    // Alloc 8 bytes.
-    {.type = SVM_INST_ALLOC, .operand = SVM_VALUE_U64(8)},
-
-    // Store 101010.
-    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_PUSH, .operand = SVM_VALUE_U64(101010)},
-    {.type = SVM_INST_WRITE},
-
-    // Read it back onto the stack.
-    {.type = SVM_INST_COPY, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_READ},
-
-    // Bring addr back to the top of the stack to free.
-    {.type = SVM_INST_SWAP, .operand = SVM_VALUE_U64(1)},
-    {.type = SVM_INST_FREE, },
-    {.type = SVM_INST_HALT, },
-  };
-  svm_load_program_from_array(&svm, program, sizeof(program) / sizeof(*program));
+  if (!svm_load_program_from_file(&svm, argv[1])) {
+    fprintf(stderr, "Error loading input file '%s'\n", argv[1]);
+  }
 
   svm_err_t result = svm_run(&svm);
-  printf("VM finished with: %s\n", svm_err_to_string(result));
+  if (result != SVM_ERR_OK) {
+    fprintf(stderr, "Error: %s\n", svm_err_to_string(result));
+  }
   svm_print_stack(&svm);
 
-  return 0;
+  return result;
 }

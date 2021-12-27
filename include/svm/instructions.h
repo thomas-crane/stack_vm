@@ -4,6 +4,7 @@
 #include "svm/value.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
   /* Misc. */
@@ -69,6 +70,11 @@ typedef enum {
 } svm_instruction_type_t;
 
 const char *svm_instruction_type_to_string(svm_instruction_type_t inst_type);
+
+bool svm_instruction_type_needs_operand(svm_instruction_type_t inst_type);
+bool svm_instruction_type_needs_label_operand(svm_instruction_type_t inst_type);
+
+bool svm_instruction_type_from_string(const char *str, svm_instruction_type_t *inst_type);
 
 typedef struct {
   svm_instruction_type_t type;
