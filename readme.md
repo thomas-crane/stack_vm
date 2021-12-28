@@ -2,6 +2,75 @@
 
 A stack based VM written in C.
 
+## Foreword
+
+This project is just for fun. There are likely to be a few nasty bugs, and there are certainly many missing features that would be needed to actually use this as a backend for a language.
+
+## Building
+
+```shell
+# Normal build.
+$ make
+
+# Release build.
+$ make release
+
+# Clean build artefacts.
+$ make clean
+```
+
+## Usage
+
+First, you'll need an SVM assembly file to assemble. There are some [examples](examples/) in this repo.
+
+```shell
+$ cat example.svma
+push 10
+push 20
+addi
+halt
+```
+
+Use the `svmasm` binary to assemble the file.
+
+```shell
+$ svmasm example.svma
+$ ls
+example.svma  example.svmo
+```
+
+Now you can run your SVM object file using the `svm` binary.
+
+```shell
+$ svm example.svmo
+Stack:
+  i64: 30 | u64: 30 | f64: 0.000000 | ptr: 0x1e
+```
+
+## Design
+
+Things that are design goals for Stack VM:
+
++ Be relatively easy to target for a compiler backend.
+
+Things that are *not* design goals:
+
++ Be performant
++ Strictly behave like a "real VM" or try to be as close to bare metal instructions as possible.
+
+Stack VM is a fairly standard run-of-the-mill virtual machine that uses a stack as the main working space for your programs.
+
+The "word size" for Stack VM is 64 bits. This means that all values on the stack are 64 bits, each instruction byte in an object file is 64 bits, etc.
+
+Internally, Stack VM has a few stacks that are used for various purposes:
+
++ The "main stack". This is where your data goes if you use `push` or `copy`, etc.
++ The call stack. This stores return addresses for function calls so that the programmer doesn't have to worry about manually handling return addresses.
++ The heap address stack. This is used to store addresses that have been allocated using `alloc`.
++ The instruction stack. Used to store the actual program.
+
+A more "bare metal" VM may only use a single stack, which is certainly possible, but places a bit more burden on the programmer who is writing the assembly (or the compiler backend).
+
 ## Instruction set
 
 ### Misc instructions
@@ -72,3 +141,8 @@ All of the comparison instructions **with the exception of `eq` and `neq`** have
 | `free`   | None        | `addr = pop()`, free the memory at `addr`.                                                       |
 | `read`   | None        | `addr = pop()`, dereference `addr` and put the value onto the stack.                             |
 | `write`  | None        | `value = pop(), addr = pop()`, set the value pointed to by `addr` to `value`.                    |
+
+
+## Acknowledgements
+
+This project is largely inspired by Alexey Kutepov's (better known as tsoding) [bm](https://github.com/tsoding/bm) project.
